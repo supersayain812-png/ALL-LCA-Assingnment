@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <time.h>
+
+int is_leap_year(int year) {
+    return (year % 400 == 0) || ((year % 4 == 0) && (year % 100 != 0));
+}
+
+int get_days_in_month(int month, int year) {
+    static const int days_in_month[12] = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    };
+
+    if (month == 1 && is_leap_year(year)) {
+        return 29;
+    }
+    return days_in_month[month];
+}
+
+/* Returns weekday index: 0 = Sunday, 1 = Monday, ..., 6 = Saturday */
+int get_first_day_of_year(int year) {
+    struct tm date = {0};
+    date.tm_year = year - 1900;
+    date.tm_mon = 0;      /* January */
+    date.tm_mday = 1;     /* 1st */
+    date.tm_hour = 12;    /* Midday avoids DST edge cases */
+
+    if (mktime(&date) != -1) {
+        return date.tm_wday;
+    }
+
+    /* Fallback calculation if mktime fails for out-of-range years */
+    long long total_days = 0;
+    if (year >= 1) {
+        for (int y = 1; y < year; y++) {
+            total_days += is_leap_year(y) ? 366 : 365;
+        }
+        /* In the Gregorian calendar, Jan 1 of year 1 corresponds to Monday (1) */
+        return (int)((1 + total_days) % 7);
+    }
+
+    return 0;
+}
+
+void print_month_calendar(int month, int year, int *start_weekday) {
+    static const char *month_names[12] = {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
+
+    int days = get_days_in_month(month, year);
+
+    printf("\n  ------------ %s %d ------------\n", month_names[month], year);
+    printf("  Sun  Mon  Tue  Wed  Thu  Fri  Sat\n");
+
+    for (int i = 0; i < *start_weekday; i++) {
+        printf("     ");
+    }
+
+    for (int day = 1; day <= days; day++) {
+        printf("%5d", day);
+        *start_weekday = (*start_weekday + 1) % 7;
+        if (*start_weekday == 0) {
+            printf("\n");
+        }
+    }
+
+    if (*start_weekday != 0) {
+        printf("\n");
+    }
+}
+
+int main(void) {
+    int year;
+
+    printf("Enter the year: ");
+    if (scanf("%d", &year) != 1) {
+        fprintf(stderr, "Invalid input. Please enter a valid integer year.\n");
+        return 1;
+    }
+
+    int current_weekday = get_first_day_of_year(year);
+
+    printf("\n======================================\n");
+    printf("          CALENDAR - %d\n", year);
+    printf("======================================\n");
+
+    for (int month = 0; month < 12; month++) {
+        print_month_calendar(month, year, &current_weekday);
+    }
+
+    return 0;
+}
